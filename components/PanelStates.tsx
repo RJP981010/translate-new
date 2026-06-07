@@ -3,6 +3,7 @@ import { AlertCircle, Loader2, Settings } from 'lucide-react';
 interface PanelStatesProps {
   status: string;
   buffer: string;
+  safeHtml?: string;
   errorMessage?: string;
   onRetry?: () => void;
   onOpenSettings?: () => void;
@@ -12,6 +13,7 @@ interface PanelStatesProps {
 export function PanelStates({
   status,
   buffer,
+  safeHtml,
   errorMessage,
   onRetry,
   onOpenSettings,
@@ -68,10 +70,14 @@ export function PanelStates({
     );
   }
 
-  if (status === 'streaming' && buffer) {
+  if (status === 'streaming' && (safeHtml || buffer)) {
     return (
       <div className="whitespace-pre-wrap px-4 py-3 text-sm leading-relaxed text-gray-800">
-        {buffer}
+        {safeHtml ? (
+          <div className="translator-rich-text" dangerouslySetInnerHTML={{ __html: safeHtml }} />
+        ) : (
+          buffer
+        )}
         <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-blue-500" />
       </div>
     );

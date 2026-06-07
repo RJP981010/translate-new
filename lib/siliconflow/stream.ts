@@ -7,7 +7,7 @@ import {
 } from './prompt';
 
 export interface StreamHandlers {
-  onChunk: (delta: string) => void;
+  onChunk: (delta: string, format: 'text' | 'html') => void;
   onDone: (fullText: string) => void;
   onError: (message: string) => void;
   isCancelled: () => boolean;
@@ -19,10 +19,12 @@ export async function streamLookup(
   text: string,
   mode: LookupMode,
   handlers: StreamHandlers,
+  sentence?: string,
 ): Promise<void> {
   const isChinese = resolveIsChinese(text);
   const system = buildSystemPrompt(mode, isChinese);
-  const user = buildUserMessage(text, mode, isChinese);
+  const user = buildUserMessage(text, mode, isChinese, sentence);
+  const chunkFormat = mode === 'translation' ? 'html' : 'text';
 
   try {
     const stream = await client.chat.completions.create({
@@ -42,7 +44,7 @@ export async function streamLookup(
       const delta = chunk.choices[0]?.delta?.content ?? '';
       if (delta) {
         full += delta;
-        handlers.onChunk(delta);
+        handlers.onChunk(delta, chunkFormat);
       }
     }
 

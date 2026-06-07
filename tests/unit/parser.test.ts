@@ -20,6 +20,30 @@ describe('parser', () => {
     expect(result?.primaryMeaning).toBe('欢迎');
   });
 
+  it('parses context meaning, pronunciation and rich html', () => {
+    const raw = JSON.stringify({
+      word: 'network',
+      phonetic: '/ˈnetwɜːrk/',
+      primaryMeaning: '网络；人脉',
+      contextMeaning: '在当前句子中表示“人脉关系”。',
+      definitions: [{ pos: 'n.', meanings: ['网络', '人脉'] }],
+      pronunciation: { available: true, label: '播放发音', lang: 'en-US' },
+      richHtml: '<p class="text-sm"><strong>network</strong>: 网络；人脉</p>',
+    });
+    const result = parseLookupResult(raw);
+    expect(result?.contextMeaning).toContain('人脉');
+    expect(result?.pronunciation?.available).toBe(true);
+    expect(result?.richHtml).toContain('<strong>');
+  });
+
+  it('keeps old JSON structures compatible when extended fields are missing', () => {
+    const result = parseLookupResult(
+      '{"word":"welcome","primaryMeaning":"欢迎","definitions":[{"pos":"v.","meanings":["欢迎"]}]}',
+    );
+    expect(result?.word).toBe('welcome');
+    expect(result?.contextMeaning).toBeUndefined();
+  });
+
   it('extracts JSON from surrounding text', () => {
     const raw = `Here is result: {"word":"test","primaryMeaning":"测试","definitions":[{"pos":"n.","meanings":["测试"]}]}`;
     const result = parseLookupResult(raw);

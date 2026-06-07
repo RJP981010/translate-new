@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { parseLookupResult } from '../lib/siliconflow/parser';
 import { detectLookupMode } from '../lib/selection';
 import { LOOKUP_STREAM_PORT } from '../lib/messaging';
+import { sanitizeRichText } from '../lib/richText';
+import { appendLookupChunk, shouldAcceptLookupMessage } from '../lib/lookupStreamState';
 import type {
   LookupMode,
   LookupResult,
@@ -13,24 +15,33 @@ const initialState = (mode: LookupMode): LookupStreamState => ({
   status: 'idle',
   mode,
   buffer: '',
+  safeHtml: '',
   hasFirstChunk: false,
   result: null,
   requestId: null,
+  selectionId: null,
 });
 
 export function useLookupStream() {
   const [state, setState] = useState<LookupStreamState>(initialState('dictionary'));
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const requestIdRef = useRef<string | null>(null);
+  const selectionIdRef = useRef<string | null>(null);
 
   const cancel = useCallback(() => {
     const id = requestIdRef.current;
+    const selectionId = selectionIdRef.current;
     if (portRef.current && id) {
-      portRef.current.postMessage({ type: 'cancel', requestId: id });
+      portRef.current.postMessage({
+        type: 'cancel',
+        requestId: id,
+        ...(selectionId ? { selectionId } : {}),
+      });
     }
     portRef.current?.disconnect();
     portRef.current = null;
     requestIdRef.current = null;
+    selectionIdRef.current = null;
   }, []);
 
   const reset = useCallback(() => {
@@ -39,34 +50,41 @@ export function useLookupStream() {
   }, [cancel]);
 
   const start = useCallback(
-    (text: string) => {
+    (text: string, selectionId: string, sentence?: string) => {
       cancel();
       const mode = detectLookupMode(text);
       const requestId = crypto.randomUUID();
       requestIdRef.current = requestId;
+      selectionIdRef.current = selectionId;
 
       setState({
         status: 'loading',
         mode,
         buffer: '',
+        safeHtml: '',
         hasFirstChunk: false,
         result: null,
         requestId,
+        selectionId,
       });
 
       const port = chrome.runtime.connect({ name: LOOKUP_STREAM_PORT });
       portRef.current = port;
 
       port.onMessage.addListener((msg: LookupStreamMessage) => {
-        if (msg.requestId !== requestId) return;
+        if (!shouldAcceptLookupMessage(msg, requestId, selectionId)) return;
 
         if (msg.type === 'chunk') {
-          setState((s) => ({
-            ...s,
-            status: 'streaming',
-            hasFirstChunk: true,
-            buffer: s.buffer + msg.delta,
-          }));
+          setState((s) => {
+            const { buffer, safeHtml } = appendLookupChunk(s.buffer, msg.delta);
+            return {
+              ...s,
+              status: 'streaming',
+              hasFirstChunk: true,
+              buffer,
+              safeHtml,
+            };
+          });
           return;
         }
 
@@ -78,7 +96,7 @@ export function useLookupStream() {
             result:
               s.mode === 'dictionary'
                 ? resolveDictionaryResult(text, s.buffer, msg.data)
-                : buildTranslationResult(text, s.buffer),
+                : buildTranslationResult(text, s.buffer, s.safeHtml),
           }));
           port.disconnect();
           portRef.current = null;
@@ -101,7 +119,7 @@ export function useLookupStream() {
         portRef.current = null;
       });
 
-      port.postMessage({ type: 'start', text, requestId, mode });
+      port.postMessage({ type: 'start', text, requestId, selectionId, mode, sentence });
     },
     [cancel],
   );
@@ -126,14 +144,16 @@ function resolveDictionaryResult(
   return fromBackground ?? null;
 }
 
-function buildTranslationResult(text: string, buffer: string): LookupResult {
+function buildTranslationResult(text: string, buffer: string, safeHtml?: string): LookupResult {
+  const meaning = sanitizeRichText(buffer).plainTextFallback || buffer.trim();
   return {
     word: text,
-    primaryMeaning: buffer.trim(),
+    primaryMeaning: meaning,
+    ...(safeHtml ? { richHtml: safeHtml } : {}),
     definitions: [
       {
         pos: '译',
-        meanings: [buffer.trim()],
+        meanings: [meaning],
       },
     ],
   };

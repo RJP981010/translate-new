@@ -1,7 +1,8 @@
 import type { LookupMode } from '../types/lookup';
 
-const MAX_LENGTH = 500;
+export const MAX_SELECTION_LENGTH = 1000;
 const DICTIONARY_MAX_WORDS = 5;
+const SENTENCE_BOUNDARY = /[.!?。！？；;]\s*/;
 
 export type SelectionValidation =
   | { ok: true; text: string; mode: LookupMode; wordCount: number }
@@ -31,7 +32,7 @@ const INVALID_ONLY = /^[\d\s\p{P}\p{S}]+$/u;
 export function validateSelection(raw: string): SelectionValidation {
   const text = trimSelection(raw);
   if (!text) return { ok: false, reason: 'empty' };
-  if (text.length > MAX_LENGTH) return { ok: false, reason: 'too_long' };
+  if (text.length > MAX_SELECTION_LENGTH) return { ok: false, reason: 'too_long' };
   if (INVALID_ONLY.test(text)) return { ok: false, reason: 'invalid' };
   return {
     ok: true,
@@ -50,4 +51,42 @@ export function getSelectionRect(): DOMRect | null {
 
 export function getSelectedText(): string {
   return window.getSelection()?.toString() ?? '';
+}
+
+export function extractCurrentSentence(rawText: string, selectedText: string): string | undefined {
+  const normalizedText = trimSelection(rawText);
+  const normalizedSelection = trimSelection(selectedText);
+  if (!normalizedText || !normalizedSelection) return undefined;
+
+  const selectionIndex = normalizedText.toLowerCase().indexOf(normalizedSelection.toLowerCase());
+  if (selectionIndex < 0) return undefined;
+
+  let start = 0;
+  for (let i = selectionIndex - 1; i >= 0; i--) {
+    if (SENTENCE_BOUNDARY.test(normalizedText[i])) {
+      start = i + 1;
+      break;
+    }
+  }
+
+  let end = normalizedText.length;
+  for (let i = selectionIndex + normalizedSelection.length; i < normalizedText.length; i++) {
+    if (SENTENCE_BOUNDARY.test(normalizedText[i])) {
+      end = i + 1;
+      break;
+    }
+  }
+
+  const sentence = trimSelection(normalizedText.slice(start, end));
+  return sentence.includes(normalizedSelection) ? sentence : undefined;
+}
+
+export function getCurrentSentenceForSelection(): string | undefined {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return undefined;
+
+  const selectedText = selection.toString();
+  const anchor = selection.anchorNode;
+  const containerText = anchor?.parentElement?.textContent ?? anchor?.textContent ?? '';
+  return extractCurrentSentence(containerText, selectedText);
 }
