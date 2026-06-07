@@ -1,50 +1,56 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+==================
+Version change: 1.0.0 → 1.1.0
+Modified principles:
+  - 6 条详细原则 → 4 条精简原则（合并性能/可插拔/流程要求）
+Removed sections:
+  - 技术约束与质量标准（详细表格）
+  - 开发流程与质量门禁（详细门禁清单）
+Added sections: None
+Templates requiring updates: 无需修改（仍兼容）
+Follow-up TODOs: None
+-->
+
+# Translator 浏览器翻译插件 Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 不破坏页面体验
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- 翻译不得不可逆地覆盖原文，须支持查看/切换
+- 尽量不破坏原页面布局和交互
+- 默认不自动翻译全站，由用户主动触发
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. 扩展分层架构
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+- 目标平台：Chrome/Edge（Manifest V3）
+- **Background**：调翻译 API、管密钥和请求
+- **Content Script**：读页面文字、展示译文
+- **Popup**：设置与操作入口
+- API 密钥不得写在 Content Script 里
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. 隐私最小化
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- 只发送翻译所需的文本，不采集无关数据
+- 权限按需申请，新增权限须在 spec 里说明
+- 密钥存 `chrome.storage`，禁止硬编码
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. MVP 优先
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- 先做最小可用功能（建议：选中文字 → 翻译 → 显示结果）
+- 每个功能按用户故事独立交付、独立验证
+- 没写进 spec 的不做
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## 基本约束
+
+- 语言：TypeScript
+- 翻译接口与页面逻辑分开，方便以后换翻译源
+- 按 Spec Kit 流程走：specify → plan → tasks → implement
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- 修订本文件时更新版本号和日期
+- 有冲突时以本文件为准
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: 2025-06-07 | **Last Amended**: 2025-06-07

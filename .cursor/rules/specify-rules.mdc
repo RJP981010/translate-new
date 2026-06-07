@@ -3,6 +3,17 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+## Active Plan: 001-selection-translate
+
+Read `specs/001-selection-translate/plan.md` for architecture and project structure.
+
+**Tech stack**: WXT + React + TypeScript + Tailwind CSS 4
+**Key libraries**: @floating-ui/dom (positioning), @webext-core/messaging, openai stream (SiliconFlow), zod
+**Streaming**: Port-based lookupStream; loading until first chunk, then incremental render
+**LLM**: 硅基流动 `https://api.siliconflow.cn/v1`，默认模型 `Qwen/Qwen2.5-7B-Instruct`，用户自备 API Key
+**UX**: 选中文字 → 下方图标 → 悬停展示 SENTENWORD 风格 AI 查词弹框；处理 flip/shift 边界
+**Out of scope**: 收藏、专业词典 Tab、发音、全页翻译
+
+**Commands**: `pnpm dev` | `pnpm build` | `pnpm test`
+**Docs**: `specs/001-selection-translate/{spec,plan,research,data-model,quickstart}.md`
 <!-- SPECKIT END -->
