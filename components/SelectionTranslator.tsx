@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFloatingPosition } from '../hooks/useFloatingPosition';
 import { useLookupStream } from '../hooks/useLookupStream';
 import { useSelection } from '../hooks/useSelection';
@@ -29,16 +29,22 @@ export function SelectionTranslator() {
     enabled: panelOpen && !!selection.rect,
     placement: 'bottom',
     offsetPx: 10,
-    elementWidth: 360,
+    elementWidth: 440,
     elementHeight: 120,
-    maxHeight: 400,
+    maxHeight: 520,
   });
 
+  useEffect(() => {
+    if (!selection.selectionId) return;
+    setPanelOpen(false);
+    lookup.reset();
+  }, [selection.selectionId]);
+
   const handleIconHover = useCallback(() => {
-    if (!selection.text || selection.validationError) return;
+    if (!selection.text || !selection.selectionId || selection.validationError) return;
     setPanelOpen(true);
     selection.clearIcon();
-    lookup.start(selection.text);
+    lookup.start(selection.text, selection.selectionId, selection.sentence);
   }, [lookup, selection]);
 
   const handleClose = useCallback(() => {
@@ -47,9 +53,29 @@ export function SelectionTranslator() {
     setPanelOpen(false);
   }, [lookup]);
 
+  useEffect(() => {
+    if (!panelOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const clickedInsideTranslator = event.composedPath().some((node) => {
+        return (
+          node instanceof Element &&
+          node.matches('[data-translator-panel], [data-translator-panel] *, [data-translator-icon], [data-translator-icon] *')
+        );
+      });
+      if (clickedInsideTranslator) return;
+      handleClose();
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [handleClose, panelOpen]);
+
   const handleRetry = useCallback(() => {
-    if (selection.text) lookup.start(selection.text);
-  }, [lookup, selection.text]);
+    if (selection.text && selection.selectionId) {
+      lookup.start(selection.text, selection.selectionId, selection.sentence);
+    }
+  }, [lookup, selection.sentence, selection.selectionId, selection.text]);
 
   const iconStyle: React.CSSProperties | undefined = iconFloating.coords
     ? {
@@ -85,13 +111,18 @@ export function SelectionTranslator() {
       )}
 
       {selection.showIcon && iconStyle && (
-        <div className="pointer-events-auto" style={iconStyle}>
+        <div
+          data-translator-icon
+          className="pointer-events-auto"
+          style={iconStyle}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
           <TriggerIcon onMouseEnter={handleIconHover} style={{}} />
         </div>
       )}
 
       {panelOpen && panelStyle && (
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto" onPointerDown={(event) => event.stopPropagation()}>
           <LookupPanel
             selectedText={selection.text}
             stream={lookup.state}
@@ -100,6 +131,8 @@ export function SelectionTranslator() {
             onOpenSettings={openSettings}
             style={panelStyle}
             maxHeight={panelFloating.maxHeight}
+            contentMaxHeight={panelFloating.contentMaxHeight}
+            originalMaxHeight={panelFloating.originalMaxHeight}
           />
         </div>
       )}

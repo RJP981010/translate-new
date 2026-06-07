@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSelectedText, getSelectionRect, validateSelection } from '../lib/selection';
+import {
+  getCurrentSentenceForSelection,
+  getSelectedText,
+  getSelectionRect,
+  validateSelection,
+} from '../lib/selection';
 
 export interface SelectionState {
   text: string;
+  selectionId: string | null;
+  sentence?: string;
   rect: DOMRect | null;
   showIcon: boolean;
   selectionKey: number;
@@ -11,6 +18,8 @@ export interface SelectionState {
 
 const initial: SelectionState = {
   text: '',
+  selectionId: null,
+  sentence: undefined,
   rect: null,
   showIcon: false,
   selectionKey: 0,
@@ -24,6 +33,10 @@ export function useSelection(panelOpen: boolean) {
     const raw = getSelectedText();
     const rect = getSelectionRect();
     if (!raw || !rect || rect.width === 0) {
+      if (panelOpen) {
+        setState((s) => ({ ...s, showIcon: false, validationError: null }));
+        return;
+      }
       setState((s) => ({
         ...initial,
         selectionKey: s.selectionKey,
@@ -35,6 +48,8 @@ export function useSelection(panelOpen: boolean) {
     if (!validation.ok) {
       setState({
         text: raw,
+        selectionId: crypto.randomUUID(),
+        sentence: undefined,
         rect,
         showIcon: false,
         selectionKey: Date.now(),
@@ -48,8 +63,10 @@ export function useSelection(panelOpen: boolean) {
 
     setState({
       text: validation.text,
+      selectionId: crypto.randomUUID(),
+      sentence: getCurrentSentenceForSelection(),
       rect,
-      showIcon: !panelOpen,
+      showIcon: true,
       selectionKey: Date.now(),
       validationError: null,
     });
@@ -60,7 +77,11 @@ export function useSelection(panelOpen: boolean) {
       requestAnimationFrame(refresh);
     };
     document.addEventListener('mouseup', onMouseUp);
-    return () => document.removeEventListener('mouseup', onMouseUp);
+    document.addEventListener('selectionchange', onMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('selectionchange', onMouseUp);
+    };
   }, [refresh]);
 
   const clearIcon = useCallback(() => {

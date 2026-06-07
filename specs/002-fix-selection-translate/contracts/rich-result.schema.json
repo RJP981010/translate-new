@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RichLookupResult",
+  "description": "划词翻译最终结果结构，支持语境释义、发音状态和清洗后的受限富文本",
+  "type": "object",
+  "required": ["word", "primaryMeaning", "definitions"],
+  "properties": {
+    "word": {
+      "type": "string",
+      "minLength": 1,
+      "description": "查询词、短语或原文"
+    },
+    "phonetic": {
+      "type": "string",
+      "description": "音标或拼音"
+    },
+    "primaryMeaning": {
+      "type": "string",
+      "minLength": 1,
+      "description": "主要释义或译文"
+    },
+    "contextMeaning": {
+      "type": "string",
+      "description": "该词在当前句子中的具体含义"
+    },
+    "definitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["pos", "meanings"],
+        "properties": {
+          "pos": {
+            "type": "string",
+            "minLength": 1
+          },
+          "meanings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "example": {
+            "type": "object",
+            "required": ["en"],
+            "properties": {
+              "en": {
+                "type": "string",
+                "minLength": 1
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pronunciation": {
+      "type": "object",
+      "required": ["available"],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "richHtml": {
+      "type": "string",
+      "description": "清洗后的受限富文本片段，不得包含脚本、事件属性、远程资源或未知样式"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "word": "network",
+      "phonetic": "/ˈnetwɜːrk/",
+      "primaryMeaning": "网络；人脉",
+      "contextMeaning": "在当前句子中表示“人际关系网”",
+      "definitions": [
+        {
+          "pos": "n.",
+          "meanings": ["网络", "人脉关系"],
+          "example": {
+            "en": "She built a strong network in the industry.",
+            "zh": "她在这个行业建立了强大的人脉。"
+          }
+        }
+      ],
+      "pronunciation": {
+        "available": true,
+        "label": "播放发音",
+        "lang": "en-US"
+      },
+      "richHtml": "<div class=\"space-y-2 text-sm\"><p><strong>network</strong>: 网络；人脉</p></div>"
+    }
+  ]
+}

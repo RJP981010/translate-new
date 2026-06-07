@@ -21,10 +21,11 @@ export function useFloatingPosition({
   offsetPx = 8,
   elementWidth = 360,
   elementHeight = 32,
-  maxHeight = 420,
+  maxHeight = 520,
 }: UseFloatingPositionOptions) {
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [floatingMaxHeight, setFloatingMaxHeight] = useState(maxHeight);
+  const [placementSide, setPlacementSide] = useState<'top' | 'bottom'>(placement);
 
   useEffect(() => {
     if (!enabled || !referenceRect) {
@@ -35,6 +36,7 @@ export function useFloatingPosition({
     const padding = 12;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
+    const viewportMaxHeight = Math.min(maxHeight, Math.max(240, viewportH - 32));
 
     let x = referenceRect.left + referenceRect.width / 2 - elementWidth / 2;
     x = clamp(x, padding, viewportW - elementWidth - padding);
@@ -50,10 +52,12 @@ export function useFloatingPosition({
     let y: number;
     if (useTop) {
       y = referenceRect.top - offsetPx - elementHeight;
-      setFloatingMaxHeight(Math.min(maxHeight, referenceRect.top - padding - offsetPx));
+      setFloatingMaxHeight(Math.max(180, Math.min(viewportMaxHeight, referenceRect.top - padding - offsetPx)));
+      setPlacementSide('top');
     } else {
       y = referenceRect.bottom + offsetPx;
-      setFloatingMaxHeight(Math.min(maxHeight, spaceBelow - offsetPx));
+      setFloatingMaxHeight(Math.max(180, Math.min(viewportMaxHeight, spaceBelow - offsetPx)));
+      setPlacementSide('bottom');
     }
 
     y = clamp(y, padding, viewportH - elementHeight - padding);
@@ -68,5 +72,11 @@ export function useFloatingPosition({
     maxHeight,
   ]);
 
-  return { coords, maxHeight: floatingMaxHeight };
+  return {
+    coords,
+    maxHeight: floatingMaxHeight,
+    contentMaxHeight: Math.max(120, floatingMaxHeight - 188),
+    originalMaxHeight: 160,
+    placement: placementSide,
+  };
 }

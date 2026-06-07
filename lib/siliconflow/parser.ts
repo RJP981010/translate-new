@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Definition, LookupResult } from '../../types/lookup';
+import type { Definition, LookupResult, PronunciationInfo } from '../../types/lookup';
 
 const exampleSchema = z.object({
   en: z.string(),
@@ -12,11 +12,20 @@ const definitionSchema = z.object({
   example: exampleSchema.optional(),
 });
 
+const pronunciationSchema = z.object({
+  available: z.boolean(),
+  label: z.string().optional(),
+  lang: z.string().optional(),
+});
+
 export const lookupResultSchema = z.object({
   word: z.string().min(1),
   phonetic: z.string().optional(),
   primaryMeaning: z.string().min(1),
+  contextMeaning: z.string().optional(),
   definitions: z.array(definitionSchema).min(1),
+  pronunciation: pronunciationSchema.optional(),
+  richHtml: z.string().optional(),
 });
 
 type RawRecord = Record<string, unknown>;
@@ -166,6 +175,8 @@ function escapeRegExp(value: string): string {
 function buildRepairedJson(chunk: string): string | null {
   const word = matchJsonString(chunk, 'word');
   const phonetic = matchJsonString(chunk, 'phonetic');
+  const contextMeaning = matchJsonString(chunk, 'contextMeaning');
+  const richHtml = matchJsonString(chunk, 'richHtml');
   const primaryMeaning =
     matchJsonString(chunk, 'primaryMeaning') ?? matchJsonString(chunk, 'meaning');
   const definitions = extractDefinitionsFromChunk(chunk);
@@ -181,7 +192,9 @@ function buildRepairedJson(chunk: string): string | null {
     word,
     ...(phonetic ? { phonetic } : {}),
     primaryMeaning,
+    ...(contextMeaning ? { contextMeaning } : {}),
     definitions: cleanMeanings(definitions),
+    ...(richHtml ? { richHtml } : {}),
   });
 }
 
@@ -189,6 +202,8 @@ function salvageLookupResult(raw: string, fallbackWord?: string): LookupResult |
   const chunk = takeLeadingPayload(stripCodeFences(raw));
   const word = matchJsonString(chunk, 'word') ?? fallbackWord?.trim() ?? '';
   const phonetic = matchJsonString(chunk, 'phonetic') ?? undefined;
+  const contextMeaning = matchJsonString(chunk, 'contextMeaning') ?? undefined;
+  const richHtml = matchJsonString(chunk, 'richHtml') ?? undefined;
   const primaryMeaning =
     matchJsonString(chunk, 'primaryMeaning') ??
     matchJsonString(chunk, 'meaning') ??
@@ -217,8 +232,10 @@ function salvageLookupResult(raw: string, fallbackWord?: string): LookupResult |
     {
       word,
       ...(phonetic ? { phonetic } : {}),
+      ...(contextMeaning ? { contextMeaning } : {}),
       primaryMeaning: resolvedPrimary,
       definitions,
+      ...(richHtml ? { richHtml } : {}),
     },
     fallbackWord,
   );
@@ -281,6 +298,35 @@ function normalizeDefinitions(value: unknown): Definition[] {
   return single ? [single] : [];
 }
 
+function normalizePronunciation(value: unknown, word: string): PronunciationInfo | undefined {
+  if (value && typeof value === 'object') {
+    const record = value as RawRecord;
+    return {
+      available: typeof record.available === 'boolean' ? record.available : true,
+      label: typeof record.label === 'string' ? record.label.trim() : '播放发音',
+      lang: typeof record.lang === 'string' ? record.lang.trim() : 'en-US',
+    };
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    return {
+      available: true,
+      label: '播放发音',
+      lang: 'en-US',
+    };
+  }
+
+  if (/^[a-z][a-z\s'-]*$/i.test(word)) {
+    return {
+      available: true,
+      label: '播放发音',
+      lang: 'en-US',
+    };
+  }
+
+  return undefined;
+}
+
 function normalizeLookupPayload(value: unknown, fallbackWord?: string): LookupResult | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as RawRecord;
@@ -310,12 +356,19 @@ function normalizeLookupPayload(value: unknown, fallbackWord?: string): LookupRe
       : typeof record.pronunciation === 'string'
         ? record.pronunciation.trim()
         : undefined;
+  const contextMeaning =
+    typeof record.contextMeaning === 'string' ? record.contextMeaning.trim() : undefined;
+  const richHtml = typeof record.richHtml === 'string' ? record.richHtml.trim() : undefined;
+  const pronunciation = normalizePronunciation(record.pronunciation, word);
 
   const normalized: LookupResult = {
     word,
     primaryMeaning,
     definitions,
     ...(phonetic ? { phonetic } : {}),
+    ...(contextMeaning ? { contextMeaning } : {}),
+    ...(pronunciation ? { pronunciation } : {}),
+    ...(richHtml ? { richHtml } : {}),
   };
 
   try {

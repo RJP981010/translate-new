@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_SELECTION_LENGTH,
   countWords,
   detectLookupMode,
+  extractCurrentSentence,
   trimSelection,
   validateSelection,
 } from '../../lib/selection';
@@ -40,6 +42,24 @@ describe('selection', () => {
   });
 
   it('rejects too long text', () => {
-    expect(validateSelection('a'.repeat(501)).ok).toBe(false);
+    expect(validateSelection('a'.repeat(MAX_SELECTION_LENGTH)).ok).toBe(true);
+    expect(validateSelection('a'.repeat(MAX_SELECTION_LENGTH + 1)).ok).toBe(false);
+  });
+
+  it('extracts current sentence around selected text', () => {
+    const sentence = extractCurrentSentence(
+      'First sentence. She built a strong network in the industry. Last sentence.',
+      'network',
+    );
+    expect(sentence).toBe('She built a strong network in the industry.');
+  });
+
+  it('falls back when current sentence cannot be resolved', () => {
+    expect(extractCurrentSentence('No matching text here.', 'network')).toBeUndefined();
+  });
+
+  it('keeps punctuation-only and blank selections invalid', () => {
+    expect(validateSelection('，！？').ok).toBe(false);
+    expect(validateSelection('\n\t').ok).toBe(false);
   });
 });

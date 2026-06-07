@@ -3,17 +3,18 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-## Active Plan: 001-selection-translate
+## Active Plan: 002-fix-selection-translate
 
-Read `specs/001-selection-translate/plan.md` for architecture and project structure.
+Read `specs/002-fix-selection-translate/plan.md` for architecture and project structure.
 
 **Tech stack**: WXT + React + TypeScript + Tailwind CSS 4
 **Key libraries**: @floating-ui/dom (positioning), @webext-core/messaging, openai stream (SiliconFlow), zod
-**Streaming**: Port-based lookupStream; loading until first chunk, then incremental render
+**Streaming**: Port-based lookupStream with requestId/selectionId filtering; loading until first chunk, then sanitized incremental rich content
 **LLM**: 硅基流动 `https://api.siliconflow.cn/v1`，默认模型 `Qwen/Qwen2.5-7B-Instruct`，用户自备 API Key
-**UX**: 选中文字 → 下方图标 → 悬停展示 SENTENWORD 风格 AI 查词弹框；处理 flip/shift 边界
-**Out of scope**: 收藏、专业词典 Tab、发音、全页翻译
+**UX**: 每次有效新选区显示图标；弹框支持长文本滚动、原文展开收起、发音播放、当前句子释义
+**Privacy/Security**: 只发送选中文本和当前句子；模型富文本必须清洗后渲染，样式限定在弹框内
+**Out of scope**: 生词本、全页翻译、多语言发音偏好、自定义主题编辑器
 
 **Commands**: `pnpm dev` | `pnpm build` | `pnpm test`
-**Docs**: `specs/001-selection-translate/{spec,plan,research,data-model,quickstart}.md`
+**Docs**: `specs/002-fix-selection-translate/{spec,plan,research,data-model,quickstart}.md`
 <!-- SPECKIT END -->

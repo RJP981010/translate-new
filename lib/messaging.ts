@@ -10,3 +10,12 @@ interface ProtocolMap {
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();
 
 export const LOOKUP_STREAM_PORT = 'lookupStream';
+
+export type {
+  LookupStreamCancel,
+  LookupStreamChunk,
+  LookupStreamDone,
+  LookupStreamError,
+  LookupStreamMessage,
+  LookupStreamStart,
+} from '../types/lookup';

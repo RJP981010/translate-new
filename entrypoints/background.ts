@@ -58,17 +58,18 @@ async function handleLookupStream(
   msg: LookupStreamStart,
   isCancelled: () => boolean,
 ) {
-  const { requestId, text, mode } = msg;
+  const { requestId, selectionId, text, mode, sentence } = msg;
 
   const validation = validateSelection(text);
   if (!validation.ok) {
     port.postMessage({
       type: 'error',
       requestId,
+      selectionId,
       code: 'INVALID_SELECTION',
       message:
         validation.reason === 'too_long'
-          ? '选区过长，请缩小范围（≤500 字）'
+          ? '选区过长，请缩小范围（≤1000 字）'
           : '无可查词内容',
     });
     return;
@@ -79,6 +80,7 @@ async function handleLookupStream(
     port.postMessage({
       type: 'error',
       requestId,
+      selectionId,
       code: 'CONFIG_MISSING',
       message: '请先配置 API Key',
     });
@@ -89,18 +91,18 @@ async function handleLookupStream(
 
   await streamLookup(client, settings.model, validation.text, mode, {
     isCancelled,
-    onChunk: (delta) => {
+    onChunk: (delta, format) => {
       if (isCancelled()) return;
-      port.postMessage({ type: 'chunk', requestId, delta });
+      port.postMessage({ type: 'chunk', requestId, selectionId, delta, format });
     },
     onDone: (fullText) => {
       if (isCancelled()) return;
       if (mode === 'dictionary') {
         const parsed = parseLookupResult(fullText, validation.text, 'background');
         const data = parsed ?? buildFallbackResult(validation.text, fullText);
-        port.postMessage({ type: 'done', requestId, data });
+        port.postMessage({ type: 'done', requestId, selectionId, data });
       } else {
-        port.postMessage({ type: 'done', requestId });
+        port.postMessage({ type: 'done', requestId, selectionId });
       }
     },
     onError: (message) => {
@@ -108,9 +110,10 @@ async function handleLookupStream(
       port.postMessage({
         type: 'error',
         requestId,
+        selectionId,
         code: 'API_ERROR',
         message: message.includes('401') ? 'API Key 无效' : `请求失败：${message}`,
       });
     },
-  });
+  }, sentence);
 }
